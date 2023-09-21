@@ -9,6 +9,7 @@ namespace DevGenious.Service.Services;
 
 public class UserService : IUserService
 {
+    private long _id;
     private readonly IRepository<User> userRepository = new Repository<User>();
 
     public async Task<UserForResultDto> CreateAsync(UserForCreationDto dto)
@@ -17,8 +18,11 @@ public class UserService : IUserService
         if (user is not null)
             throw new CustomException(400, "User is already exist");
 
+        await GenerateIdAsync();
+
         var person = new User()
         {
+            Id = _id,
             FirstName = dto.FirstName,
             LastName = dto.LastName,
             Email = dto.Email,
@@ -27,14 +31,14 @@ public class UserService : IUserService
             CreatedAt = DateTime.UtcNow
         };
 
-        var result = await userRepository.InsertAsync(user);
+        var result = await userRepository.InsertAsync(person);
 
         var mappedUser = new UserForResultDto()
         {
-            Id = result.Id,
-            FirstName = result.FirstName,
-            LastName = result.LastName,
-            PhoneNumber = result.PhoneNumber,
+            Id = person.Id,
+            FirstName = person.FirstName,
+            LastName = person.LastName,
+            PhoneNumber = person.PhoneNumber,
         };
 
         return mappedUser;
@@ -112,6 +116,19 @@ public class UserService : IUserService
         };
 
         return result;
+    }
 
+    public async Task GenerateIdAsync()
+    {
+        var users = await userRepository.SelectAllAsync();
+        if (users.Count == 0)
+        {
+            this._id = 1;
+        }
+        else
+        {
+            var user = users[users.Count() - 1];
+            this._id = ++user.Id;
+        }
     }
 }
